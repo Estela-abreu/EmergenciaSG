@@ -50,7 +50,8 @@ body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;fon
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:6px;margin-bottom:12px;}
 .card{background:var(--panel);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;box-shadow:0 1px 4px rgba(0,0,0,.05);min-height:70px;}
 .cl{font-size:.58rem;font-family:var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
-.cv{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.45rem;line-height:1;}
+.cv{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.45rem;line-height:1;display:flex;align-items:flex-end;gap:2px;white-space:nowrap;}
+.cmeta{font-family:var(--mono);font-size:.62rem;font-weight:600;color:var(--muted);line-height:1.05;margin-left:1px;margin-bottom:2px;}
 .cdlt{margin-top:5px;font-family:var(--mono);font-size:.58rem;line-height:1.15;white-space:nowrap;}
 .cb{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden;}
 .cbf{height:100%;border-radius:2px;}
@@ -1601,32 +1602,31 @@ function deltaIcon(k,delta){
   const good=isLowerBetter(k)?delta<0:delta>0;
   return good?'▲':'▼';
 }
-function fmtDelta(k,delta,dec=1,su=''){
-  if(delta==null||isNaN(delta))return '<span style="color:var(--muted)">sem base inicial</span>';
-  const col=deltaColor(k,delta),ico=deltaIcon(k,delta),sinal=delta>0?'+':'';
-  return `<span style="color:${col}">${ico} ${sinal}${delta.toFixed(dec)}${su} vs início</span>`;
+const CARD_METAS={
+  efic:{op:'≥',v:100,d:0,s:'%'},
+  util:{op:'≥',v:85,d:0,s:'%'},
+  tt:{op:'≥',v:50,d:0,s:'%'},
+  ativ:{op:'≥',v:4.5,d:1,s:''},
+  ts:{op:'≤',v:40,d:0,s:' m'},
+  ti:{op:'≤',v:20,d:0,s:' m'},
+  login:{op:'≤',v:8,d:0,s:' m'},
+  despacho:{op:'≤',v:10,d:0,s:' m'},
+  desloc:{op:'≤',v:25,d:0,s:' m'},
+  retorno:{op:'≤',v:40,d:0,s:' m'},
+  tml:{op:'≤',v:25,d:0,s:' m'},
+  imp:{op:'=',v:0,d:0,s:''},
+  rei:{op:'=',v:0,d:0,s:''},
+  ord2:{op:'=',v:0,d:0,s:''}
+};
+function fmtDelta(k,deltaPct,dec=1,su='%'){
+  if(deltaPct==null||isNaN(deltaPct))return '<span style="color:var(--muted)">sem base inicial</span>';
+  const col=deltaColor(k,deltaPct),ico=deltaIcon(k,deltaPct),sinal=deltaPct>0?'+':'';
+  return `<span style="color:${col}">${ico} ${sinal}${deltaPct.toFixed(dec)}${su} vs início</span>`;
 }
-function fmtCardMeta(k){
-  // Quando o período selecionado tem apenas um dia, os cards mostram a meta em vez da variação contra o início.
-  const metas={
-    efic:{op:'≥',v:100,d:0,s:'%'},
-    util:{op:'≥',v:85,d:0,s:'%'},
-    tt:{op:'≥',v:50,d:0,s:'%'},
-    ativ:{op:'≥',v:4.5,d:1,s:''},
-    ts:{op:'≤',v:40,d:0,s:' m'},
-    ti:{op:'≤',v:20,d:0,s:' m'},
-    login:{op:'≤',v:8,d:0,s:' m'},
-    despacho:{op:'≤',v:10,d:0,s:' m'},
-    desloc:{op:'≤',v:25,d:0,s:' m'},
-    retorno:{op:'≤',v:40,d:0,s:' m'},
-    tml:{op:'≤',v:25,d:0,s:' m'},
-    imp:{op:'=',v:0,d:0,s:''},
-    rei:{op:'=',v:0,d:0,s:''},
-    ord2:{op:'=',v:0,d:0,s:''}
-  };
-  const m=metas[k];
-  if(!m)return '<span style="color:var(--muted)">Meta: —</span>';
-  return `<span style="color:var(--hi)">Meta: ${m.op} ${Number(m.v).toFixed(m.d)}${m.s}</span>`;
+function fmtMetaInline(k){
+  const m=CARD_METAS[k];
+  if(!m)return '';
+  return `<span class="cmeta">/${Number(m.v).toFixed(m.d)}${m.s}</span>`;
 }
 function avgMetric(arr,k){
   const v=arr.filter(r=>r[k]!=null&&!isNaN(r[k]));
@@ -2467,29 +2467,30 @@ function refreshP8Options(){
     if(desempenhoSel.length){dataInicio=dataInicio.filter(r=>desempenhoSel.includes(desempenhoClasse(r.sc)));}
 
     const CDS=[
-      {l:'Score médio',k:'sc',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('sc',d,1,' pts'),cl:v=>clC(v),mx:110},
-      {l:'Eficiência',k:'efic',fn:v=>v?.toFixed(1)+'%',dfn:d=>fmtDelta('efic',d,1,' p.p.'),cl:v=>mC('efic',v),mx:200},
-      {l:'Utilização',k:'util',fn:v=>v?.toFixed(1)+'%',dfn:d=>fmtDelta('util',d,1,' p.p.'),cl:v=>mC('util',v),mx:100},
-      {l:'Task Time',k:'tt',fn:v=>v?.toFixed(1)+'%',dfn:d=>fmtDelta('tt',d,1,' p.p.'),cl:v=>mC('tt',v),mx:100},
-      {l:'Ativ/Dia',k:'ativ',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('ativ',d,1,''),cl:v=>mC('ativ',v),mx:8},
-      {l:'TMR Sec',k:'ts',fn:v=>v?.toFixed(1)+' m',dfn:d=>fmtDelta('ts',d,1,' m'),cl:v=>mC('ts',v),mx:72},
-      {l:'TMR Imp',k:'ti',fn:v=>v?.toFixed(1)+' m',dfn:d=>fmtDelta('ti',d,1,' m'),cl:v=>mC('ti',v),mx:28},
-      {l:'1ºLogin',k:'login',fn:v=>v?.toFixed(0)+' m',dfn:d=>fmtDelta('login',d,0,' m'),cl:v=>mC('login',v),mx:15},
-      {l:'1ºDesl',k:'desloc',fn:v=>v?.toFixed(0)+' m',dfn:d=>fmtDelta('desloc',d,0,' m'),cl:v=>mC('desloc',v),mx:30},
-      {l:'Retorno',k:'retorno',fn:v=>v?.toFixed(0)+' m',dfn:d=>fmtDelta('retorno',d,0,' m'),cl:v=>mC('retorno',v),mx:60},
-      {l:'TML',k:'tml',fn:v=>v?.toFixed(1)+' m',dfn:d=>fmtDelta('tml',d,1,' m'),cl:v=>mC('tml',v),mx:50},
-      {l:'Improdutivos/dia',k:'imp',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('imp',d,1,''),cl:v=>v>0?'#c62828':'var(--muted)',mx:5},
-      {l:'Reincidentes/dia',k:'rei',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('rei',d,1,''),cl:v=>v>0?'#c62828':'var(--muted)',mx:5},
-      {l:'Ordem 2/dia',k:'ord2',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('ord2',d,1,''),cl:v=>v>0?'#c62828':'var(--muted)',mx:5},
+      {l:'Score médio',k:'sc',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('sc',d,1,'%'),cl:v=>clC(v),mx:110},
+      {l:'Eficiência',k:'efic',fn:v=>v?.toFixed(1)+'%',dfn:d=>fmtDelta('efic',d,1,'%'),cl:v=>mC('efic',v),mx:200},
+      {l:'Utilização',k:'util',fn:v=>v?.toFixed(1)+'%',dfn:d=>fmtDelta('util',d,1,'%'),cl:v=>mC('util',v),mx:100},
+      {l:'Task Time',k:'tt',fn:v=>v?.toFixed(1)+'%',dfn:d=>fmtDelta('tt',d,1,'%'),cl:v=>mC('tt',v),mx:100},
+      {l:'Ativ/Dia',k:'ativ',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('ativ',d,1,'%'),cl:v=>mC('ativ',v),mx:8},
+      {l:'TMR Sec',k:'ts',fn:v=>v?.toFixed(1)+' m',dfn:d=>fmtDelta('ts',d,1,'%'),cl:v=>mC('ts',v),mx:72},
+      {l:'TMR Imp',k:'ti',fn:v=>v?.toFixed(1)+' m',dfn:d=>fmtDelta('ti',d,1,'%'),cl:v=>mC('ti',v),mx:28},
+      {l:'1ºLogin',k:'login',fn:v=>v?.toFixed(0)+' m',dfn:d=>fmtDelta('login',d,1,'%'),cl:v=>mC('login',v),mx:15},
+      {l:'1ºDesl',k:'desloc',fn:v=>v?.toFixed(0)+' m',dfn:d=>fmtDelta('desloc',d,1,'%'),cl:v=>mC('desloc',v),mx:30},
+      {l:'Retorno',k:'retorno',fn:v=>v?.toFixed(0)+' m',dfn:d=>fmtDelta('retorno',d,1,'%'),cl:v=>mC('retorno',v),mx:60},
+      {l:'TML',k:'tml',fn:v=>v?.toFixed(1)+' m',dfn:d=>fmtDelta('tml',d,1,'%'),cl:v=>mC('tml',v),mx:50},
+      {l:'Improdutivos/dia',k:'imp',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('imp',d,1,'%'),cl:v=>v>0?'#c62828':'var(--muted)',mx:5},
+      {l:'Reincidentes/dia',k:'rei',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('rei',d,1,'%'),cl:v=>v>0?'#c62828':'var(--muted)',mx:5},
+      {l:'Ordem 2/dia',k:'ord2',fn:v=>v?.toFixed(1),dfn:d=>fmtDelta('ord2',d,1,'%'),cl:v=>v>0?'#c62828':'var(--muted)',mx:5},
       {l:'Equipes',k:null,fn:()=>data.length,dfn:()=>`${rows.length} equipe-dias`,cl:()=>'var(--muted)',mx:1,sp:true},
     ];
     document.getElementById('cds').innerHTML=CDS.map(c=>{
       const v=c.sp?data.length:av(data,c.k);
       const vIni=c.sp?null:av(dataInicio,c.k);
-      const delta=c.sp?null:(v!=null&&vIni!=null?v-vIni:null);
+      const deltaPct=c.sp?null:(v!=null&&vIni!=null&&Math.abs(Number(vIni))>0.0001?((v-vIni)/Math.abs(vIni))*100:null);
       const txt=v!=null?c.fn(v):'—',col=c.cl(v),pct=c.sp?100:Math.min(100,Math.max(0,(v??0)/c.mx*100));
-      const deltaTxt=c.sp?c.dfn():(mesmoDia?fmtCardMeta(c.k):c.dfn(delta));
-      return`<div class="card"><div class="cl">${c.l}</div><div class="cv" style="color:${col}">${txt}</div><div class="cdlt">${deltaTxt}</div><div class="cb"><div class="cbf" style="width:${pct}%;background:${col}"></div></div></div>`;
+      const metaTxt=c.sp?'':fmtMetaInline(c.k);
+      const deltaTxt=c.sp?c.dfn():c.dfn(deltaPct);
+      return`<div class="card"><div class="cl">${c.l}</div><div class="cv" style="color:${col}"><span>${txt}</span>${metaTxt}</div><div class="cdlt">${deltaTxt}</div><div class="cb"><div class="cbf" style="width:${pct}%;background:${col}"></div></div></div>`;
     }).join('');
     const sorted=[...data].sort((a,b)=>{
       let va=a[sC],vb=b[sC];
